@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>CalorieAI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0b2a38;
+    --card:rgba(255,255,255,0.07);
+    --border:rgba(255,255,255,0.15);
+    --border2:rgba(255,255,255,0.40);
+    --text:#dff0f7;
+    --sub:#7cb8d0;
+    --muted:#89cce0;
+    --btn:#dff0f7;
+    --btn-text:#0b2a38;
+    --divider:rgba(255,255,255,0.10);
+    --upload:rgba(255,255,255,0.11);
+    --protein:#f87171;
+    --fat:#fbbf24;
+    --carbs:#34d399;
+    --danger:#f87171;
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px 16px 60px;min-height:100vh}
+  .wrap{max-width:420px;margin:0 auto}
+
+  /* Header */
+  .label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-family:monospace;margin-bottom:4px}
+  h1{font-size:24px;font-weight:700;color:var(--text)}
+  .subtitle{font-size:13px;color:var(--sub);margin-top:4px;margin-bottom:24px}
+
+  /* Upload */
+  .upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;background:var(--upload);margin-bottom:16px;cursor:pointer;transition:border-color .2s}
+  .upload-zone:hover{border-color:var(--text)}
+  .upload-icon{font-size:32px;margin-bottom:8px}
+  .upload-title{font-size:14px;font-weight:600;color:var(--sub)}
+  .upload-hint{font-size:12px;color:var(--muted);margin-top:4px}
+  #file-input{display:none}
+  .preview-img{width:100%;max-height:240px;object-fit:cover;border-radius:8px;margin-bottom:12px}
+  .btn-row{display:flex;gap:8px}
+  .btn{flex:1;background:var(--btn);color:var(--btn-text);border:none;border-radius:8px;padding:11px 0;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-icon{background:none;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:0 14px;cursor:pointer;font-size:16px}
+  .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text);flex:1;border-radius:8px;padding:11px 0;font-size:14px;font-weight:600;cursor:pointer}
+
+  /* Result card */
+  .card{border:2px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:24px;background:var(--card)}
+  .dish-name{font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px}
+  .dish-meta{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:14px}
+  .kcal-row{border-top:2px solid var(--border2);padding:10px 0;display:flex;justify-content:space-between;align-items:baseline}
+  .kcal-label{font-weight:700;color:var(--text)}
+  .kcal-val{font-family:monospace;font-size:26px;font-weight:700;color:var(--text)}
+  .macro-row{border-top:1px solid var(--divider);padding:8px 0;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+  .notes{font-size:11px;color:var(--muted);margin:10px 0 14px}
+
+  /* Diary */
+  .section-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .section-title{font-size:16px;font-weight:700;color:var(--text)}
+  .section-date{font-size:11px;color:var(--muted);font-family:monospace}
+  .totals-card{border:2px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--card)}
+  .totals-main{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px}
+  .totals-label{font-weight:700;color:var(--text)}
+  .totals-val{font-family:monospace;font-size:22px;font-weight:700;color:var(--text)}
+  .macros-row{display:flex;justify-content:space-between;font-family:monospace;font-size:12px}
+  .entry-list{list-style:none}
+  .entry-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--divider);padding:10px 0}
+  .entry-name{font-size:14px;color:var(--text)}
+  .entry-meta{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px}
+  .del-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px;line-height:1}
+  .del-btn:hover{color:var(--danger)}
+  .empty-msg{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .clear-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;margin-top:12px;padding:0}
+
+  /* Subscription banner */
+  .sub-banner{border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:20px;background:rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .sub-text{font-size:13px;color:var(--sub)}
+  .sub-text b{color:var(--text)}
+  .sub-btn{background:var(--btn);color:var(--btn-text);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+  /* Error */
+  .error{color:var(--danger);font-size:13px;margin-bottom:12px}
+
+  /* Spinner */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:16px;height:16px;border:2px solid var(--btn-text);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+
+  /* Free badge */
+  .free-badge{font-size:11px;color:var(--muted);font-family:monospace;text-align:right;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <p class="label">ии-анализ фото</p>
+    <h1>CalorieAI 🥗</h1>
+    <p class="subtitle">Сфотографируй блюдо — ИИ посчитает калории и БЖУ за секунды.</p>
+  </header>
+
+  <!-- Subscription banner (показывается если лимит заканчивается) -->
+  <div class="sub-banner" id="sub-banner" style="display:none">
+    <div class="sub-text" id="sub-text"></div>
+    <button class="sub-btn" id="sub-btn">Подписка ⭐</button>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone">
+    <div id="upload-placeholder">
+      <div class="upload-icon">📷</div>
+      <div class="upload-title">Загрузить фото блюда</div>
+      <div class="upload-hint">JPG, PNG или сделай снимок</div>
+    </div>
+    <div id="preview-block" style="display:none">
+      <img id="preview-img" class="preview-img" alt="фото блюда"/>
+      <div class="btn-row">
+        <button class="btn" id="analyze-btn">Проанализировать</button>
+        <button class="btn-icon" id="reset-btn" title="Выбрать другое фото">↺</button>
+      </div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" capture="environment"/>
+  </div>
+
+  <div class="free-badge" id="free-badge"></div>
+  <div class="error" id="error" style="display:none"></div>
+
+  <!-- Result -->
+  <div class="card" id="result-card" style="display:none">
+    <div class="dish-name" id="dish-name"></div>
+    <div class="dish-meta" id="dish-meta"></div>
+    <div class="kcal-row">
+      <span class="kcal-label">Калории</span>
+      <span class="kcal-val" id="kcal"></span>
+    </div>
+    <div class="macro-row"><span style="color:var(--protein)">Белки</span><span style="color:var(--protein);font-family:monospace" id="protein"></span></div>
+    <div class="macro-row"><span style="color:var(--fat)">Жиры</span><span style="color:var(--fat);font-family:monospace" id="fat"></span></div>
+    <div class="macro-row"><span style="color:var(--carbs)">Углеводы</span><span style="color:var(--carbs);font-family:monospace" id="carbs"></span></div>
+    <div class="notes" id="notes"></div>
+    <button class="btn" id="add-btn" style="margin-top:4px">Добавить в дневник ✓</button>
+  </div>
+
+  <!-- Diary -->
+  <section>
+    <div class="section-header">
+      <span class="section-title">Сегодня</span>
+      <span class="section-date" id="today-date"></span>
+    </div>
+    <div class="totals-card" id="totals-card" style="display:none">
+      <div class="totals-main">
+        <span class="totals-label">Итого калорий</span>
+        <span class="totals-val" id="total-kcal">0</span>
+      </div>
+      <div class="macros-row">
+        <span style="color:var(--protein)" id="total-p"></span>
+        <span style="color:var(--fat)" id="total-f"></span>
+        <span style="color:var(--carbs)" id="total-c"></span>
+      </div>
+    </div>
+    <p class="empty-msg" id="empty-msg">Пока пусто — добавь первое блюдо выше.</p>
+    <ul class="entry-list" id="entry-list"></ul>
+    <button class="clear-btn" id="clear-btn" style="display:none">Очистить дневник за сегодня</button>
+  </section>
+
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const INIT_DATA = tg?.initData || "";
+const BASE = "";   // пустая строка = запросы идут на тот же домен
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const show = id => $(id).style.display = "";
+const hide = id => $(id).style.display = "none";
+
+function setError(msg){ $("error").textContent = msg; msg ? show("error") : hide("error"); }
+
+// ── Today date ─────────────────────────────────────────────────────────────────
+$("today-date").textContent = new Date().toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let imageBase64 = null, mediaType = "image/jpeg", currentResult = null, diary = [];
+
+// ── Upload / preview ──────────────────────────────────────────────────────────
+$("upload-zone").addEventListener("click", e => {
+  if (e.target.closest("#preview-block")) return;
+  $("file-input").click();
+});
+
+$("file-input").addEventListener("change", e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  mediaType = file.type || "image/jpeg";
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    imageBase64 = dataUrl.split(",")[1];
+    $("preview-img").src = dataUrl;
+    hide("upload-placeholder"); show("preview-block");
+    hide("result-card"); setError("");
+  };
+  reader.readAsDataURL(file);
+});
+
+$("reset-btn").addEventListener("click", e => {
+  e.stopPropagation();
+  imageBase64 = null; currentResult = null;
+  $("file-input").value = "";
+  hide("preview-block"); show("upload-placeholder"); hide("result-card"); setError("");
+});
+
+// ── Analyze ───────────────────────────────────────────────────────────────────
+$("analyze-btn").addEventListener("click", async () => {
+  if (!imageBase64) return;
+  $("analyze-btn").disabled = true;
+  $("analyze-btn").innerHTML = '<span class="spinner"></span> Анализирую...';
+  setError("");
+
+  try {
+    const resp = await fetch(BASE + "/analyze", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ init_data: INIT_DATA, image_base64: imageBase64, media_type: mediaType })
+    });
+
+    if (resp.status === 402) {
+      setError("Бесплатный лимит исчерпан. Оформи подписку ниже.");
+      showSubBanner(0, false); return;
+    }
+    if (!resp.ok) { setError("Ошибка сервера. Попробуй ещё раз."); return; }
+
+    const data = await resp.json();
+    currentResult = data.result;
+    renderResult(currentResult);
+    updateFreeBadge(data.scans_left, data.is_subscribed);
+  } catch(err) {
+    setError("Не удалось подключиться к серверу.");
+  } finally {
+    $("analyze-btn").disabled = false;
+    $("analyze-btn").textContent = "Проанализировать";
+  }
+});
+
+function renderResult(r) {
+  const CONF = { low:"низкая", medium:"средняя", high:"высокая" };
+  $("dish-name").textContent = r.dish_name;
+  $("dish-meta").textContent = `≈ ${r.estimated_weight_g} г · уверенность: ${CONF[r.confidence]||r.confidence}`;
+  $("kcal").textContent = r.calories;
+  $("protein").textContent = r.protein_g + " г";
+  $("fat").textContent = r.fat_g + " г";
+  $("carbs").textContent = r.carbs_g + " г";
+  $("notes").textContent = r.notes || "";
+  show("result-card");
+}
+
+// ── Add to diary ───────────────────────────────────────────────────────────────
+$("add-btn").addEventListener("click", async () => {
+  if (!currentResult) return;
+  $("add-btn").disabled = true;
+  try {
+    const resp = await fetch(BASE + "/diary/add", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ init_data: INIT_DATA, entry: currentResult })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      currentResult.id = data.id;
+      currentResult.time = new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+      diary.push({...currentResult});
+      renderDiary();
+      // сбрасываем
+      hide("result-card"); hide("preview-block"); show("upload-placeholder");
+      imageBase64 = null; currentResult = null; $("file-input").value = "";
+    }
+  } catch { setError("Не удалось сохранить запись."); }
+  finally { $("add-btn").disabled = false; }
+});
+
+// ── Diary ─────────────────────────────────────────────────────────────────────
+async function loadDiary() {
+  if (!INIT_DATA) return;
+  try {
+    const resp = await fetch(BASE + `/diary/today?init_data=${encodeURIComponent(INIT_DATA)}`);
+    const data = await resp.json();
+    diary = data.entries || [];
+    renderDiary();
+  } catch(e) { console.error("diary load error", e); }
+}
+
+function renderDiary() {
+  const list = $("entry-list");
+  list.innerHTML = "";
+  if (diary.length === 0) {
+    show("empty-msg"); hide("totals-card"); hide("clear-btn"); return;
+  }
+  hide("empty-msg"); show("totals-card"); show("clear-btn");
+
+  let totCal=0, totP=0, totF=0, totC=0;
+  diary.forEach(e => {
+    totCal += Number(e.calories)||0;
+    totP   += Number(e.protein_g)||0;
+    totF   += Number(e.fat_g)||0;
+    totC   += Number(e.carbs_g)||0;
+    const li = document.createElement("li");
+    li.className = "entry-item";
+    li.innerHTML = `
+      <div>
+        <div class="entry-name">${e.dish_name}</div>
+        <div class="entry-meta">${e.time||""} · ${Math.round(e.calories)} ккал</div>
+      </div>
+      <button class="del-btn" data-id="${e.id}">✕</button>`;
+    list.appendChild(li);
+  });
+
+  $("total-kcal").textContent = Math.round(totCal);
+  $("total-p").textContent = `Б ${Math.round(totP)} г`;
+  $("total-f").textContent = `Ж ${Math.round(totF)} г`;
+  $("total-c").textContent = `У ${Math.round(totC)} г`;
+
+  list.querySelectorAll(".del-btn").forEach(btn => {
+    btn.addEventListener("click", () => deleteEntry(Number(btn.dataset.id)));
+  });
+}
+
+async function deleteEntry(id) {
+  try {
+    await fetch(BASE + `/diary/${id}`, {
+      method:"DELETE",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({init_data: INIT_DATA})
+    });
+    diary = diary.filter(e => e.id !== id);
+    renderDiary();
+  } catch { setError("Не удалось удалить запись."); }
+}
+
+$("clear-btn").addEventListener("click", async () => {
+  for (const e of [...diary]) await deleteEntry(e.id);
+});
+
+// ── Subscription ───────────────────────────────────────────────────────────────
+async function loadSubStatus() {
+  if (!INIT_DATA) return;
+  try {
+    const resp = await fetch(BASE + `/subscription/status?init_data=${encodeURIComponent(INIT_DATA)}`);
+    const data = await resp.json();
+    updateFreeBadge(data.free_left, data.is_subscribed);
+  } catch {}
+}
+
+function updateFreeBadge(scansLeft, isSubscribed) {
+  if (isSubscribed) {
+    $("free-badge").textContent = "✓ Подписка активна · безлимит";
+    hide("sub-banner");
+  } else if (scansLeft !== null && scansLeft !== undefined) {
+    $("free-badge").textContent = `Бесплатных сканов осталось: ${scansLeft}`;
+    if (scansLeft <= 2) showSubBanner(scansLeft, false);
+  }
+}
+
+function showSubBanner(left, isSubscribed) {
+  if (isSubscribed) return;
+  $("sub-text").innerHTML = left === 0
+    ? "<b>Лимит исчерпан.</b> Оформи подписку, чтобы продолжить."
+    : `Осталось <b>${left}</b> бесплатных скана. Подпишись и сканируй без ограничений.`;
+  show("sub-banner");
+}
+
+$("sub-btn").addEventListener("click", async () => {
+  $("sub-btn").disabled = true;
+  try {
+    await fetch(BASE + "/subscription/buy", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({init_data: INIT_DATA})
+    });
+    // Инвойс придёт в чат с ботом
+    if (tg) tg.close();
+    else alert("Инвойс отправлен в чат с ботом!");
+  } catch { } finally { $("sub-btn").disabled = false; }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSubStatus();
+loadDiary();
+</script>
+</body>
+</html>
