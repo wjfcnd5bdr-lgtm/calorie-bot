@@ -60,19 +60,16 @@ def init_db():
 def verify_init_data(init_data: str) -> dict | None:
     """Проверяем подпись initData от Telegram WebApp."""
     try:
-        params = {}
-        for part in init_data.split("&"):
-            if "=" in part:
-                k, v = part.split("=", 1)
-                params[k] = v
+        import urllib.parse
+        # parse_qsl правильно URL-декодирует все значения
+        params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
         received_hash = params.pop("hash", "")
         data_check = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
         secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
         computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
         if hmac.compare_digest(computed, received_hash):
-            import urllib.parse
-            user_str = urllib.parse.unquote(params.get("user", "{}"))
-            return json.loads(user_str)
+            return json.loads(params.get("user", "{}"))
+        print(f"hash mismatch: expected {computed[:8]}... got {received_hash[:8]}...")
     except Exception as e:
         print(f"verify error: {e}")
     return None
@@ -292,8 +289,9 @@ async def sub_buy(request: Request):
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token","")
-    if secret != WEBHOOK_SECRET:
+    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if WEBHOOK_SECRET and secret and secret != WEBHOOK_SECRET:
+        print(f"Webhook secret mismatch: got '{secret}', expected '{WEBHOOK_SECRET}'")
         raise HTTPException(403, "bad secret")
 
     update = await request.json()
