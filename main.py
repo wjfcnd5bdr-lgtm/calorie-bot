@@ -10,11 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import anthropic
 
-BOT_TOKEN        = os.getenv("BOT_TOKEN", "")
-ANTHROPIC_KEY    = os.getenv("ANTHROPIC_API_KEY", "")
+BOT_TOKEN        = os.getenv("BOT_TOKEN", "").strip()
+ANTHROPIC_KEY    = os.getenv("ANTHROPIC_API_KEY", "").strip()
 WEBHOOK_SECRET   = os.getenv("WEBHOOK_SECRET", "Valeria")
 FREE_SCAN_LIMIT  = int(os.getenv("FREE_SCAN_LIMIT", "10"))
-STARS_PRICE      = int(os.getenv("STARS_PRICE", "50"))   # Telegram Stars за подписку
+STARS_PRICE      = int(os.getenv("STARS_PRICE", "50"))
+DEBUG_MODE       = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
 DB_PATH = "diary.db"
 
@@ -59,17 +60,49 @@ def init_db():
 
 def verify_init_data(init_data: str) -> dict | None:
     """Проверяем подпись initData от Telegram WebApp."""
+    # DEBUG режим — пропускаем проверку, возвращаем тестового пользователя
+    if DEBUG_MODE:
+        print("DEBUG_MODE: skipping verification")
+        try:
+            import urllib.parse
+            params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+            if "user" in params:
+                return json.loads(params["user"])
+        except:
+            pass
+        return {"id": 999999, "first_name": "Test", "username": "testuser"}
+
+    if not init_data:
+        return None
+
+    import urllib.parse
+
     try:
-        import urllib.parse
-        # parse_qsl правильно URL-декодирует все значения
-        params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
-        received_hash = params.pop("hash", "")
-        data_check = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
         secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
-        computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
-        if hmac.compare_digest(computed, received_hash):
-            return json.loads(params.get("user", "{}"))
-        print(f"hash mismatch: expected {computed[:8]}... got {received_hash[:8]}...")
+
+        # Метод 1: parse_qsl (декодирует URL-encoded значения)
+        params1 = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+        h1 = params1.pop("hash", "")
+        dc1 = "\n".join(f"{k}={v}" for k, v in sorted(params1.items()))
+        c1 = hmac.new(secret, dc1.encode(), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(c1, h1):
+            print("verify OK (method 1)")
+            return json.loads(params1.get("user", "{}"))
+
+        # Метод 2: raw split без декодирования
+        params2 = {}
+        for part in init_data.split("&"):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                params2[k] = v
+        h2 = params2.pop("hash", "")
+        dc2 = "\n".join(f"{k}={v}" for k, v in sorted(params2.items()))
+        c2 = hmac.new(secret, dc2.encode(), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(c2, h2):
+            print("verify OK (method 2)")
+            return json.loads(urllib.parse.unquote(params2.get("user", "{}")))
+
+        print(f"Both methods failed | m1:{c1[:8]} m2:{c2[:8]} got:{h1[:8]} | token_start:{BOT_TOKEN[:6]}")
     except Exception as e:
         print(f"verify error: {e}")
     return None
