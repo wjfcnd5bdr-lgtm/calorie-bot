@@ -12,9 +12,9 @@ import anthropic
 
 BOT_TOKEN        = os.getenv("BOT_TOKEN", "")
 ANTHROPIC_KEY    = os.getenv("ANTHROPIC_API_KEY", "")
-WEBHOOK_SECRET   = os.getenv("WEBHOOK_SECRET", "calorie_secret_2025")
-FREE_SCAN_LIMIT  = int(os.getenv("FREE_SCAN_LIMIT", "5"))
-STARS_PRICE      = int(os.getenv("STARS_PRICE", "150"))   # Telegram Stars за подписку
+WEBHOOK_SECRET   = os.getenv("WEBHOOK_SECRET", "Valeria")
+FREE_SCAN_LIMIT  = int(os.getenv("FREE_SCAN_LIMIT", "10"))
+STARS_PRICE      = int(os.getenv("STARS_PRICE", "50"))   # Telegram Stars за подписку
 
 DB_PATH = "diary.db"
 
