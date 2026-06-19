@@ -183,7 +183,7 @@ async def analyze(req: AnalyzeRequest):
         raise HTTPException(402, f"Бесплатный лимит исчерпан ({FREE_SCAN_LIMIT} сканов). Оформи подписку.")
 
     # Вызываем Claude
-    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY, base_url="https://apinet.cloud/v1")
+    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY, base_url="https://apinet.cloud")
     prompt = """Ты — нутрициолог-ассистент. Проанализируй блюдо на фото и оцени пищевую ценность.
 Ответь СТРОГО в виде JSON (без markdown, без текста до/после):
 {
