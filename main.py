@@ -12,9 +12,9 @@ import anthropic
 
 BOT_TOKEN        = os.getenv("BOT_TOKEN", "").strip()
 ANTHROPIC_KEY    = os.getenv("ANTHROPIC_API_KEY", "").strip()
-WEBHOOK_SECRET   = os.getenv("WEBHOOK_SECRET", "Valeria")
-FREE_SCAN_LIMIT  = int(os.getenv("FREE_SCAN_LIMIT", "10"))
-STARS_PRICE      = int(os.getenv("STARS_PRICE", "50"))
+WEBHOOK_SECRET   = os.getenv("WEBHOOK_SECRET", "calorie_secret_2025")
+FREE_SCAN_LIMIT  = int(os.getenv("FREE_SCAN_LIMIT", "5"))
+STARS_PRICE      = int(os.getenv("STARS_PRICE", "150"))
 DEBUG_MODE       = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
 DB_PATH = "diary.db"
@@ -183,7 +183,7 @@ async def analyze(req: AnalyzeRequest):
         raise HTTPException(402, f"Бесплатный лимит исчерпан ({FREE_SCAN_LIMIT} сканов). Оформи подписку.")
 
     # Вызываем Claude
-    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY, base_url="https://apinet.cloud/v1")
     prompt = """Ты — нутрициолог-ассистент. Проанализируй блюдо на фото и оцени пищевую ценность.
 Ответь СТРОГО в виде JSON (без markdown, без текста до/после):
 {
