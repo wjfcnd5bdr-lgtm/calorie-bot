@@ -368,29 +368,12 @@ function updateTotals(){
 }
 
 // ── Analyze ────────────────────────────────────────────────────────────────
-const PROMPT=`Ты — нутрициолог-ассистент. Определи все ингредиенты блюда на фото.
+const PROMPT=`Ты — нутрициолог. Проанализируй блюдо на фото. Верни ТОЛЬКО JSON без markdown и без пояснений.
 
-Верни СТРОГО JSON без markdown:
-{
-  "dish_name":"название на русском",
-  "confidence":"low|medium|high",
-  "notes":"короткое пояснение",
-  "ingredients":[
-    {
-      "name":"ингредиент",
-      "estimated_weight_g":число,
-      "calories_per_100g":число,
-      "protein_per_100g":число,
-      "fat_per_100g":число,
-      "carbs_per_100g":число,
-      "uncertain":true|false,
-      "uncertain_question":"вопрос если uncertain",
-      "default_variant_index":0,
-      "variants":[{"label":"название","calories_per_100g":число,"protein_per_100g":число,"fat_per_100g":число,"carbs_per_100g":число}]
-    }
-  ]
-}
-Правила: перечисли каждый заметный ингредиент отдельно. uncertain:true только для продуктов с сильным разбросом калорий (сметана, йогурт, кефир, молоко, сыр, мясо разной жирности). Для uncertain дай 2-4 реальных варианта. Если продукт однозначный — uncertain:false, variants:[].`;
+Пример правильного ответа:
+{"dish_name":"Гречка с котлетой","confidence":"high","notes":"Стандартная порция","ingredients":[{"name":"Гречка варёная","estimated_weight_g":150,"calories_per_100g":132,"protein_per_100g":4.5,"fat_per_100g":2.3,"carbs_per_100g":25.0,"uncertain":false,"uncertain_question":null,"default_variant_index":0,"variants":[]},{"name":"Котлета говяжья","estimated_weight_g":120,"calories_per_100g":235,"protein_per_100g":14.6,"fat_per_100g":18.2,"carbs_per_100g":6.1,"uncertain":true,"uncertain_question":"Из какого мяса котлета?","default_variant_index":0,"variants":[{"label":"Говядина","calories_per_100g":235,"protein_per_100g":14.6,"fat_per_100g":18.2,"carbs_per_100g":6.1},{"label":"Свинина","calories_per_100g":290,"protein_per_100g":12.0,"fat_per_100g":24.0,"carbs_per_100g":6.0}]}]}
+
+Правила: ВСЕ числа calories_per_100g, protein_per_100g, fat_per_100g, carbs_per_100g должны быть больше 0. Перечисли каждый ингредиент отдельно. uncertain:true только для продуктов с большим разбросом калорий.`;
 
 $("analyze-btn").addEventListener("click",async()=>{
   if(!imageBase64) return;
@@ -408,11 +391,39 @@ $("analyze-btn").addEventListener("click",async()=>{
     if(!resp.ok){setError("Ошибка сервера. Попробуй ещё раз."); return;}
     const data=await resp.json();
     const r=data.result;
-    ingredients=(r.ingredients||[]).map(ing=>({
-      ...ing, weight_g:ing.estimated_weight_g||100,
-      chosen_variant:ing.default_variant_index??0,
-      variants:ing.variants||[], _open:false
-    }));
+    // Парсим ингредиенты с fallback для нулевых значений
+    const rawIngs = r.ingredients||[];
+    ingredients = rawIngs.map(ing=>{
+      // Если calories_per_100g = 0, пробуем альтернативные поля
+      const cal = Number(ing.calories_per_100g)||Number(ing.calories)||Number(ing.kcal)||0;
+      const prot = Number(ing.protein_per_100g)||Number(ing.protein)||Number(ing.proteins)||0;
+      const fat = Number(ing.fat_per_100g)||Number(ing.fat)||Number(ing.fats)||0;
+      const carb = Number(ing.carbs_per_100g)||Number(ing.carbs)||Number(ing.carbohydrates)||0;
+      return {
+        ...ing,
+        calories_per_100g: cal,
+        protein_per_100g: prot,
+        fat_per_100g: fat,
+        carbs_per_100g: carb,
+        weight_g: Number(ing.estimated_weight_g)||Number(ing.weight_g)||100,
+        chosen_variant: ing.default_variant_index??0,
+        variants: ing.variants||[],
+        _open: false
+      };
+    });
+    // Если ingredients пустые — создаём один ингредиент из верхнеуровневых полей
+    if(ingredients.length===0 && (r.calories||r.calories_per_100g)){
+      ingredients=[{
+        name: r.dish_name||"Блюдо",
+        calories_per_100g: Number(r.calories_per_100g||r.calories)||0,
+        protein_per_100g: Number(r.protein_per_100g||r.protein)||0,
+        fat_per_100g: Number(r.fat_per_100g||r.fat)||0,
+        carbs_per_100g: Number(r.carbs_per_100g||r.carbs)||0,
+        weight_g: Number(r.estimated_weight_g||r.weight_g)||300,
+        uncertain:false, uncertain_question:null,
+        default_variant_index:0, chosen_variant:0, variants:[], _open:false
+      }];
+    }
     $("dish-input").value=r.dish_name||"";
     $("conf").textContent=`уверенность: ${CONF_LABELS[r.confidence]||r.confidence}`;
     if(r.notes){$("notes").textContent=r.notes; show("notes");} else hide("notes");
@@ -425,7 +436,7 @@ $("analyze-btn").addEventListener("click",async()=>{
 
 // ── Add to diary ───────────────────────────────────────────────────────────
 $("add-btn").addEventListener("click",async()=>{
-  if(!ingredients.length) return;
+  if(!ingredients.length && $("result-card").style.display==="none") return;
   $("add-btn").disabled=true;
   const t=calcTotals();
   const entry={
