@@ -76,9 +76,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 /* Search */
 .search-input{width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;padding:10px 14px;outline:none;margin-bottom:10px;font-family:inherit}
-.categories{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;scrollbar-width:none}
-.categories::-webkit-scrollbar{display:none}
-.cat-btn{white-space:nowrap;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.categories{display:flex;flex-wrap:wrap;gap:7px;padding-bottom:8px;margin-bottom:8px}
+.cat-btn{white-space:nowrap;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;line-height:1.4}
 .cat-btn.active{border-color:var(--accent);background:rgba(91,163,201,0.15);color:var(--accent)}
 .food-list{overflow-y:auto;flex:1}
 .food-item{padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);transition:all .15s}
@@ -326,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="card">
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">⭐ Подписка</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px" id="sub-status-text">Загрузка...</div>
-    <button class="sub-btn-gold" id="buy-sub-btn">Оформить подписку — 50 ⭐</button>
+    <button class="sub-btn-gold" id="buy-sub-btn">Оформить подписку — 200 ⭐</button>
   </div>
 </div>
 
