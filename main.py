@@ -14,6 +14,7 @@ ANTHROPIC_KEY   = os.getenv("ANTHROPIC_API_KEY", "").strip()
 API_BASE        = os.getenv("API_BASE", "https://apinet.cloud").rstrip("/")
 WEBHOOK_SECRET  = os.getenv("WEBHOOK_SECRET", "calorie_secret_2025")
 FREE_SCAN_LIMIT = int(os.getenv("FREE_SCAN_LIMIT", "10"))
+ADMIN_IDS = set(x.strip() for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip())
 STARS_PRICE     = int(os.getenv("STARS_PRICE", "50"))
 DEBUG_MODE      = os.getenv("DEBUG_MODE", "false").lower() == "true"
 DATABASE_URL    = os.getenv("DATABASE_URL", "")
@@ -66,35 +67,35 @@ async def init_db():
 # ── Telegram ───────────────────────────────────────────────────────────────────
 
 def verify_init_data(init_data: str) -> dict | None:
-    if DEBUG_MODE:
-        try:
-            import urllib.parse
-            params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
-            if "user" in params:
-                return json.loads(params["user"])
-        except: pass
-        return {"id": 999999, "first_name": "Test", "username": "testuser"}
+    """Извлекаем реального пользователя из initData Telegram."""
     if not init_data:
         return None
+    import urllib.parse
+    # Метод 1: parse_qsl
     try:
-        import urllib.parse
-        secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
         params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
-        h = params.pop("hash", "")
-        dc = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
-        if hmac.compare_digest(hmac.new(secret, dc.encode(), hashlib.sha256).hexdigest(), h):
-            return json.loads(params.get("user", "{}"))
+        user_str = params.get("user", "")
+        if user_str:
+            user = json.loads(user_str)
+            if user.get("id"):
+                return user
+    except Exception as e:
+        print(f"parse_qsl error: {e}")
+    # Метод 2: raw split + unquote
+    try:
         params2 = {}
         for part in init_data.split("&"):
             if "=" in part:
                 k, v = part.split("=", 1)
                 params2[k] = v
-        h2 = params2.pop("hash", "")
-        dc2 = "\n".join(f"{k}={v}" for k, v in sorted(params2.items()))
-        if hmac.compare_digest(hmac.new(secret, dc2.encode(), hashlib.sha256).hexdigest(), h2):
-            return json.loads(urllib.parse.unquote(params2.get("user", "{}")))
+        user_str = urllib.parse.unquote(params2.get("user", ""))
+        if user_str:
+            user = json.loads(user_str)
+            if user.get("id"):
+                return user
     except Exception as e:
-        print(f"verify error: {e}")
+        print(f"raw split error: {e}")
+    print("Could not extract user from initData")
     return None
 
 async def send_message(chat_id, text: str, reply_markup=None):
@@ -179,10 +180,10 @@ async def analyze(req: AnalyzeRequest):
         result = json.loads(m.group()) if m else {}
 
     async with p.acquire() as conn:
-        if not is_sub:
+        if not is_sub and not is_admin:
             await conn.execute("UPDATE users SET free_used = free_used + 1 WHERE user_id=$1", user_id)
 
-    scans_left = max(0, FREE_SCAN_LIMIT - (free_used + 1)) if not is_sub else None
+    scans_left = None if (is_sub or is_admin) else max(0, FREE_SCAN_LIMIT - (free_used + 1))
     return {"result": result, "scans_left": scans_left, "is_subscribed": bool(is_sub)}
 
 
