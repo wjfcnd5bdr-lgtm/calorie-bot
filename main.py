@@ -1,13 +1,18 @@
 import os, json, hmac, hashlib, re
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
 import httpx, asyncpg
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# Московское время UTC+3
+MSK = timezone(timedelta(hours=3))
+def today_msk():
+    return datetime.now(MSK).date()
 
 BOT_TOKEN       = os.getenv("BOT_TOKEN", "").strip()
 ANTHROPIC_KEY   = os.getenv("ANTHROPIC_API_KEY", "").strip()
@@ -196,7 +201,7 @@ async def diary_add(req: DiaryRequest):
     async with p.acquire() as conn:
         row = await conn.fetchrow(
             "INSERT INTO entries (user_id,entry_date,entry_time,dish_name,weight_g,calories,protein_g,fat_g,carbs_g,confidence,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id",
-            str(user["id"]), date.today(), datetime.now().strftime("%H:%M"),
+            str(user["id"]), today_msk(), datetime.now().strftime("%H:%M"),
             e.get("dish_name"), e.get("estimated_weight_g"),
             e.get("calories"), e.get("protein_g"), e.get("fat_g"), e.get("carbs_g"),
             e.get("confidence"), e.get("notes")
@@ -212,7 +217,7 @@ async def diary_today(init_data: str):
     async with p.acquire() as conn:
         rows = await conn.fetch(
             "SELECT * FROM entries WHERE user_id=$1 AND entry_date=$2 ORDER BY created_at",
-            str(user["id"]), date.today()
+            str(user["id"]), today_msk()
         )
     result = []
     for r in rows:
@@ -380,7 +385,6 @@ a{color:#5ba3c9;text-decoration:none}
 
 @app.get("/privacy")
 async def privacy():
-    from fastapi.responses import HTMLResponse
     return HTMLResponse(content=PRIVACY_HTML)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
