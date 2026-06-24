@@ -325,6 +325,64 @@ async def health():
     except: pass
     return {"status": "ok", "db": db_ok, "debug": DEBUG_MODE}
 
+
+PRIVACY_HTML = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Политика конфиденциальности — КБЖУ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b2a38;color:#dff0f7;padding:24px 16px 48px;max-width:640px;margin:0 auto;line-height:1.7}
+h1{font-size:22px;font-weight:800;margin-bottom:8px;color:#fff}
+h2{font-size:16px;font-weight:700;margin:24px 0 8px;color:#dff0f7}
+p{font-size:14px;color:#b0cfe0;margin-bottom:12px}
+ul{font-size:14px;color:#b0cfe0;margin-bottom:12px;padding-left:20px}
+li{margin-bottom:6px}
+.date{font-size:12px;color:#7cb8d0;margin-bottom:32px}
+a{color:#5ba3c9;text-decoration:none}
+</style>
+</head>
+<body>
+<h1>Политика конфиденциальности</h1>
+<div class="date">Дата последнего обновления: 24 июня 2026 г.</div>
+<p>Настоящая Политика конфиденциальности описывает, как бот КБЖУ собирает, использует и защищает данные пользователей.</p>
+<h2>1. Какие данные мы собираем</h2>
+<ul>
+<li>Идентификатор пользователя Telegram (user_id)</li>
+<li>Имя пользователя и никнейм в Telegram (если доступны)</li>
+<li>Фотографии блюд, которые вы отправляете для анализа</li>
+<li>Данные о питании: названия блюд, вес порций, калории, БЖУ</li>
+<li>Дата и время добавления записей в дневник</li>
+</ul>
+<h2>2. Как мы используем данные</h2>
+<ul>
+<li>Для анализа фотографий блюд с помощью ИИ и расчёта КБЖУ</li>
+<li>Для ведения персонального дневника питания</li>
+<li>Для отображения статистики и прогресса</li>
+<li>Для проверки статуса подписки и учёта бесплатных сканов</li>
+</ul>
+<h2>3. Хранение данных</h2>
+<p>Данные дневника питания хранятся в защищённой базе данных. Фотографии блюд передаются на сервер ИИ для анализа и не сохраняются постоянно. Мы храним только текстовый результат анализа.</p>
+<h2>4. Передача данных третьим лицам</h2>
+<p>Фотографии блюд передаются сервису искусственного интеллекта исключительно для распознавания и расчёта пищевой ценности. Мы не продаём и не передаём персональные данные третьим лицам в коммерческих целях.</p>
+<h2>5. Платежи</h2>
+<p>Оплата подписки осуществляется через встроенную систему Telegram Stars. Мы не получаем и не храним данные банковских карт пользователей.</p>
+<h2>6. Удаление данных</h2>
+<p>Вы можете удалить свои записи в любое время через интерфейс приложения. Для полного удаления аккаунта напишите в поддержку.</p>
+<h2>7. Возраст пользователей</h2>
+<p>Сервис предназначен для лиц старше 16 лет.</p>
+<h2>8. Контакты</h2>
+<p>По вопросам конфиденциальности: <a href="https://t.me/КБЖУ">написать в бот</a></p>
+</body>
+</html>"""
+
+@app.get("/privacy")
+async def privacy():
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=PRIVACY_HTML)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
