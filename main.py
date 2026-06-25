@@ -148,6 +148,7 @@ async def analyze(req: AnalyzeRequest):
         raise HTTPException(403, "Неверная подпись")
 
     user_id = str(user["id"])
+    is_admin = user_id in ADMIN_IDS
     p = await get_pool()
 
     async with p.acquire() as conn:
@@ -158,7 +159,7 @@ async def analyze(req: AnalyzeRequest):
         row = await conn.fetchrow("SELECT is_subscribed, free_used FROM users WHERE user_id=$1", user_id)
         is_sub = row["is_subscribed"]; free_used = row["free_used"]
 
-        if not is_sub and free_used >= FREE_SCAN_LIMIT:
+        if not is_sub and not is_admin and free_used >= FREE_SCAN_LIMIT:
             raise HTTPException(402, "Лимит исчерпан")
 
     async with httpx.AsyncClient(timeout=60.0) as client:
