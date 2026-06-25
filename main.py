@@ -301,7 +301,9 @@ async def webhook(request: Request):
     update = await request.json()
     if msg := update.get("message"):
         text = msg.get("text",""); chat_id = msg["chat"]["id"]; u = msg.get("from",{})
-        if text.startswith("/start"):
+        if text == "/appss_verify":
+            await send_message(chat_id, "appss_96e728")
+        elif text.startswith("/start"):
             domain = os.getenv("RAILWAY_PUBLIC_DOMAIN","")
             await send_message(chat_id,
                 f"Привет, <b>{u.get('first_name','друг')}</b>! 👋\n\nЯ помогу следить за питанием без скучных таблиц. Просто фотографируй еду — остальное сделаю я 📸\n\nУ тебя <b>{FREE_SCAN_LIMIT} бесплатных сканов</b>. Поехали! 👇",
